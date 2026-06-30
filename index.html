@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do App Mael - Día 16</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            transition: background 0.3s;
+        }
+
+       .dark-mode {
+            background: #1a1a1a;
+            color: white;
+        }
+
+        #tareaInput {
+            padding: 10px;
+            width: 250px;
+            margin: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #4CAF50;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        /* FILTROS DÍA 16 */
+        #filtros {
+            margin: 15px 0;
+        }
+
+        #filtros button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            border: 1px solid #ccc;
+            background: white;
+            color: black;
+        }
+
+       .filtro-activo {
+            background: #4CAF50!important;
+            color: white!important;
+            border: 1px solid #4CAF50!important;
+        }
+
+       .dark-mode #filtros button {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #e0e0e0;
+            padding: 10px;
+            margin: 5px auto;
+            width: 350px;
+            border-radius: 5px;
+            text-align: left;
+            cursor: pointer;
+            overflow: auto;
+        }
+
+       .dark-mode li {
+            background: #333;
+        }
+
+       .completada {
+            text-decoration: line-through;
+            opacity: 0.6;
+            background: #c8e6c9;
+        }
+
+       .dark-mode.completada {
+            background: #2e7d32;
+        }
+
+       .btn-borrar {
+            float: right;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+       .btn-borrar:hover {
+            background: #cc0000;
+        }
+.texto-tarea {
+    cursor: text;
+    display: inline-block;
+    width: 70%;
+}
+
+.input-editar {
+    width: 90%;
+    padding: 2px 5px;
+    border: 1px solid #4CAF50;
+    border-radius: 3px;
+    font-size: 16px;
+    font-family: Arial, sans-serif;
+}
+
+.dark-mode .input-editar {
+    background: #333;
+    color: white;
+}
+#contador {
+    margin: 10px 0;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.handle {
+    cursor: grab;
+    margin-right: 8px;
+    opacity: 0.5;
+}
+
+.handle:active {
+    cursor: grabbing;
+}
+
+.fecha-tarea {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-left: 10px;
+}
+
+li.arrastrando {
+    opacity: 0.4;
+    background: #ffeb3b;
+}
+
+.dark-mode li.arrastrando {
+    background: #f9a825;
+}
+    </style>
+</head>
+<body>
+    <h1 id="titulo">Mi Primera Web Pro</h1>
+
+    <input type="text" id="tareaInput" placeholder="Escribe una tarea...">
+    <button onclick="agregarTarea()">Agregar Tarea</button>
+    <button onclick="cambiarTema()">🌙 Tema</button>
+    <button onclick="resetearTodo()">Resetear Todo</button>
+<div id="contador">Cargando...</div>
+
+<div id="filtros">
+    <button id="filtroTodas" class="filtro-activo" onclick="cambiarFiltro('todas')">Todas</button>
+    <button id="filtroPendientes" onclick="cambiarFiltro('pendientes')">Pendientes</button>
+    <button id="filtroCompletadas" onclick="cambiarFiltro('completadas')">Completadas</button>
+</div>
+
+      <ul id="listaTareas"></ul>
+
+    <script>
+        
+        let tareas = JSON.parse(localStorage.getItem("tareas")) || [];
+        let filtroActual = "todas"; // DÍA 16
+     
+        window.onload = function() {
+            mostrarTareas();
+            cargarTema();
+        }
+     
+        function agregarTarea() {
+    let input = document.getElementById("tareaInput");
+    let texto = input.value.trim();
+
+    if (texto === "") {
+        alert("Escribe una tarea primero");
+        return;
+    }
+
+    let fecha = new Date().toLocaleDateString('es-MX');
+    tareas.push({
+        texto: texto,
+        hecha: false,
+        fecha: fecha // ← NUEVO CAMPO
+    });
+
+    localStorage.setItem("tareas", JSON.stringify(tareas));
+    input.value = "";
+    mostrarTareas();
+}
+        
+       function mostrarTareas() {
+    let lista = document.getElementById("listaTareas");
+    lista.innerHTML = "";
+
+    actualizarContador();
+
+    let tareasFiltradas = tareas;
+    if (filtroActual === "pendientes") {
+        tareasFiltradas = tareas.filter(tarea =>!tarea.hecha);
+    } else if (filtroActual === "completadas") {
+        tareasFiltradas = tareas.filter(tarea => tarea.hecha);
+    }
+
+    for (let i = 0; i < tareasFiltradas.length; i++) {
+        let indexOriginal = tareas.indexOf(tareasFiltradas[i]);
+        let clase = tareasFiltradas[i].hecha? "completada" : "";
+        let icono = tareasFiltradas[i].hecha? "☑" : "☐";
+        let fecha = tareasFiltradas[i].fecha || "Sin fecha"; // Por si hay tareas viejas
+
+        lista.innerHTML += `
+            <li class="${clase}" draggable="true" data-index="${indexOriginal}">
+                <span class="handle">☰</span>
+                <span onclick="toggleTarea(${indexOriginal})">${icono}</span>
+                <span class="texto-tarea" ondblclick="editarTarea(this, ${indexOriginal})">${tareasFiltradas[i].texto}</span>
+                <span class="fecha-tarea">[${fecha}]</span>
+                <button class="btn-borrar" onclick="borrarTarea(event, ${indexOriginal})">🗑️</button>
+            </li>`;
+    }
+
+    actualizarBotonesFiltro();
+    activarDragAndDrop(); // ← ACTIVA EL DRAG
+}
+
+function actualizarContador() {
+    let completadas = tareas.filter(t => t.hecha).length;
+    let total = tareas.length;
+    document.getElementById("contador").innerHTML =
+        `Tareas completadas: ${completadas}/${total}`;
+}
+
+        function toggleTarea(index) {
+            tareas[index].hecha =!tareas[index].hecha;
+            localStorage.setItem("tareas", JSON.stringify(tareas));
+            mostrarTareas();
+        }
+
+        function borrarTarea(event, index) {
+            event.stopPropagation();
+            tareas.splice(index, 1);
+            localStorage.setItem("tareas", JSON.stringify(tareas));
+            mostrarTareas();
+        }
+
+function editarTarea(elemento, index) {
+    if (elemento.querySelector('input')) return;
+
+    let textoActual = tareas[index].texto;
+    elemento.innerHTML = `<input type="text" class="input-editar" value="${textoActual}">`;
+
+    let input = elemento.querySelector('input');
+    input.focus();
+    input.select(); // Selecciona todo el texto
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            guardarEdicion(index, input.value);
+        }
+        if (e.key === 'Escape') {
+            cancelarEdicion();
+        }
+    });
+
+    input.addEventListener('blur', function() {
+        guardarEdicion(index, input.value);
+    });
+}
+
+function guardarEdicion(index, nuevoTexto) {
+    let texto = nuevoTexto.trim();
+    if (texto!== "") {
+        tareas[index].texto = texto;
+        localStorage.setItem("tareas", JSON.stringify(tareas));
+    }
+
+    mostrarTareas(); 
+}
+
+function activarDragAndDrop() {
+    let items = document.querySelectorAll('#listaTareas li');
+
+    items.forEach(item => {
+        item.addEventListener('dragstart', function() {
+            setTimeout(() => item.classList.add('arrastrando'), 0);
+        });
+
+        item.addEventListener('dragend', function() {
+            item.classList.remove('arrastrando');
+        });
+    });
+
+    let lista = document.getElementById("listaTareas");
+
+    lista.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        const arrastrando = document.querySelector('.arrastrando');
+        const despuesDe = getElementoDespues(lista, e.clientY);
+
+        if (despuesDe == null) {
+            lista.appendChild(arrastrando);
+        } else {
+            lista.insertBefore(arrastrando, despuesDe);
+        }
+    });
+
+    lista.addEventListener('drop', function() {
+        let nuevosIndices = [];
+        document.querySelectorAll('#listaTareas li').forEach(li => {
+            nuevosIndices.push(parseInt(li.dataset.index));
+        });
+
+        tareas = nuevosIndices.map(i => tareas[i]);
+        localStorage.setItem("tareas", JSON.stringify(tareas));
+        mostrarTareas();
+    });
+}
+
+function getElementoDespues(container, y) {
+    const elementos = [...container.querySelectorAll('li:not(.arrastrando)')];
+
+    return elementos.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+function cancelarEdicion() {
+    mostrarTareas(); // Solo re-renderiza sin guardar
+}
+        // 5. CAMBIAR FILTRO - DÍA 16
+        function cambiarFiltro(nuevoFiltro) {
+            filtroActual = nuevoFiltro;
+            mostrarTareas();
+        }
+
+        function actualizarBotonesFiltro() {
+            document.getElementById("filtroTodas").classList.remove("filtro-activo");
+            document.getElementById("filtroPendientes").classList.remove("filtro-activo");
+            document.getElementById("filtroCompletadas").classList.remove("filtro-activo");
+
+            if (filtroActual === "todas") {
+                document.getElementById("filtroTodas").classList.add("filtro-activo");
+            } else if (filtroActual === "pendientes") {
+                document.getElementById("filtroPendientes").classList.add("filtro-activo");
+            } else {
+                document.getElementById("filtroCompletadas").classList.add("filtro-activo");
+            }
+        }
+
+        function cambiarTema() {
+            document.body.classList.toggle("dark-mode");
+            let titulo = document.getElementById("titulo");
+            if (document.body.classList.contains("dark-mode")) {
+                titulo.innerHTML = "Modo Oscuro Activado 🌙";
+                localStorage.setItem("tema", "oscuro");
+            } else {
+                titulo.innerHTML = "Modo Claro Activado ☀️";
+                localStorage.setItem("tema", "claro");
+            }
+        }
+
+        function cargarTema() {
+            if (localStorage.getItem("tema") === "oscuro") {
+                document.body.classList.add("dark-mode");
+                document.getElementById("titulo").innerHTML = "Modo Oscuro Activado 🌙";
+            }
+        }
+
+        function resetearTodo() {
+            if (confirm("¿Seguro que quieres borrar TODO?")) {
+                localStorage.clear();
+                tareas = [];
+                filtroActual = "todas";
+                document.body.classList.remove("dark-mode");
+                document.getElementById("titulo").innerHTML = "Mi Primera Web Pro";
+                mostrarTareas();
+            }
+        }
+    </script>
+</body>
+</html>
